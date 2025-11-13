@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model usuarios {
+  id              Int           @id @default(autoincrement())
+  nombre          String        @db.VarChar(255)
+  apellido        String        @db.VarChar(255)
+  email           String        @unique @db.VarChar(255)
+  password        String        @db.VarChar(255)
+  rol             String        @default("usuario") @db.VarChar(50)
+  estado          String        @default("activo") @db.VarChar(50)
+  fecha_creacion  DateTime      @default(now())
+  codigo_2fa      String?       @db.VarChar(100)
+  activar_2fa     Boolean       @default(false)
+  
+  productos       productos[]   @relation("ProductoUsuario")
+  registros       registros[]   @relation("RegistroUsuario")
+  
+  @@map("usuarios")
+}
+
+model productos {
+  id              Int           @id @default(autoincrement())
+  nombre          String        @db.VarChar(255)
+  descripcion     String?
+  codigo          String        @unique @db.VarChar(100)
+  categoria       String?       @db.VarChar(255)
+  estado          String        @default("activo") @db.VarChar(50)
+  usuario_creacion Int?
+  fecha_creacion  DateTime      @default(now())
+  
+  usuario         usuarios?     @relation("ProductoUsuario", fields: [usuario_creacion], references: [id])
+  registros       registros[]
+  parametros      parametros[]
+  
+  @@map("productos")
+}
+
+model registros {
+  id              Int           @id @default(autoincrement())
+  producto_id     Int
+  tipo_registro   String        @db.VarChar(100)
+  fecha_registro  DateTime
+  observaciones   String?
+  usuario_creacion Int?
+  fecha_creacion  DateTime      @default(now())
+  estado          String        @default("activo") @db.VarChar(50)
+  
+  producto        productos     @relation(fields: [producto_id], references: [id])
+  usuario         usuarios?     @relation("RegistroUsuario", fields: [usuario_creacion], references: [id])
+  controles       controles[]
+  fotos           fotos[]
+  
+  @@map("registros")
+}
+
+model parametros {
+  id              Int           @id @default(autoincrement())
+  nombre          String        @db.VarChar(255)
+  valor_min       Decimal?      @db.Decimal(10, 2)
+  valor_max       Decimal?      @db.Decimal(10, 2)
+  unidad          String?       @db.VarChar(50)
+  tipo            String        @default("numerico") @db.VarChar(50)
+  estado          String        @default("activo") @db.VarChar(50)
+  
+  productos       productos[]
+  controles       controles[]
+  
+  @@map("parametros")
+}
+
+model controles {
+  id              Int           @id @default(autoincrement())
+  registro_id     Int
+  parametro_id    Int?
+  valor_medido    Decimal?      @db.Decimal(10, 2)
+  resultado       String?       @db.VarChar(50)
+  observaciones   String?
+  fecha_control   DateTime      @default(now())
+  
+  registro        registros     @relation(fields: [registro_id], references: [id], onDelete: Cascade)
+  parametro       parametros?   @relation(fields: [parametro_id], references: [id])
+  
+  @@map("controles")
+}
+
+model fotos {
+  id              Int           @id @default(autoincrement())
+  registro_id     Int
+  nombre_archivo  String        @db.VarChar(255)
+  datos_base64    String        @db.Text
+  fecha_creacion  DateTime      @default(now())
+  
+  registro        registros     @relation(fields: [registro_id], references: [id], onDelete: Cascade)
+  
+  @@map("fotos")
+}
